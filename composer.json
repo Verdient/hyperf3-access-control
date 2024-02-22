@@ -1,0 +1,25 @@
+{
+    "name": "verdient/hyperf3-access-control",
+    "type": "library",
+    "require": {
+        "hyperf/config": "^3.1",
+        "hyperf/context": "^3.1",
+        "hyperf/contract": "^3.1",
+        "hyperf/di": "^3.1",
+        "hyperf/http-message": "^3.1",
+        "hyperf/http-server": "^3.1",
+        "psr/http-message": "^2.0",
+        "psr/http-server-handler": "^1.0",
+        "psr/http-server-middleware": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Verdient\\Hyperf3\\AccessControl\\": "src"
+        }
+    },
+    "extra": {
+        "hyperf": {
+            "config": "Verdient\\Hyperf3\\AccessControl\\ConfigProvider"
+        }
+    }
+}
