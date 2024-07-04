@@ -26,7 +26,7 @@ class AccessControlMiddleware implements MiddlewareInterface
         $dispatched = $request->getAttribute(Dispatched::class);
         if ($dispatched instanceof Dispatched && $dispatched->isFound()) {
             $credential = new Credential($request);
-            switch ($credential->pass($credential)) {
+            switch ($credential->pass()) {
                 case Result::PASS:
                     return $handler->handle($request->withAttribute(Credential::class, $credential));
                 case Result::UNAUTHORIZED:
