@@ -4,25 +4,39 @@ declare(strict_types=1);
 
 namespace Verdient\Hyperf3\AccessControl;
 
-use Hyperf\Context\ApplicationContext;
-
 /**
  * 路由
+ *
  * @author Verdient。
  */
 class Route
 {
+    /**
+     * @param string $serverName 服务器名称
+     * @param string $method 方法
+     * @param string $path 路径
+     * @param string $className 类名
+     * @param string $methodName 方法名
+     * @param bool $allowGuest 是否允许访客访问
+     * @param array $permissions 权限
+     * @param string $group 组
+     *
+     * @author Verdient。
+     */
     public function __construct(
         protected string $serverName,
+        protected string $method,
+        protected string $path,
         protected string $className,
         protected string $methodName,
-        protected Mode $mode,
+        protected bool $allowGuest,
+        protected array $permissions,
         protected string $group
-    ) {
-    }
+    ) {}
 
     /**
      * 获取服务器名称
+     *
      * @author Verdient。
      */
     public function serverName(): string
@@ -30,8 +44,30 @@ class Route
         return $this->serverName;
     }
 
+
+    /**
+     * 获取方法
+     *
+     * @author Verdient。
+     */
+    public function method(): string
+    {
+        return $this->method;
+    }
+
+    /**
+     * 获取路径
+     *
+     * @author Verdient。
+     */
+    public function path(): string
+    {
+        return $this->path;
+    }
+
     /**
      * 获取类名
+     *
      * @author Verdient。
      */
     public function className(): string
@@ -41,6 +77,7 @@ class Route
 
     /**
      * 获取方法名
+     *
      * @author Verdient。
      */
     public function methodName(): string
@@ -49,51 +86,32 @@ class Route
     }
 
     /**
-     * 获取访问控制模式
+     * 是否允许访客访问
+     *
      * @author Verdient。
      */
-    public function mode(): Mode
+    public function allowGuest(): bool
     {
-        return $this->mode;
+        return $this->allowGuest;
+    }
+
+    /**
+     * 路由所需的权限
+     *
+     * @author Verdient。
+     */
+    public function permissions(): array
+    {
+        return $this->permissions;
     }
 
     /**
      * 获取访问控制组
+     *
      * @author Verdient。
      */
     public function group(): string
     {
         return $this->group;
-    }
-
-    /**
-     * 获取路由是否可以访问
-     * @author Verdient。
-     */
-    public function pass(Credential $credential)
-    {
-        if ($credential->serverName() == $this->serverName) {
-            switch ($this->mode) {
-                case Mode::PUBLIC:
-                    return Result::PASS;
-                case Mode::AUTHENTICATED:
-                    return $credential->isGuest() ? Result::UNAUTHORIZED : Result::PASS;
-                case Mode::DEFAULT:
-                    if ($credential->isGuest()) {
-                        return Result::UNAUTHORIZED;
-                    }
-                    if (!ApplicationContext::hasContainer()) {
-                        return Result::FORBIDDEN;
-                    }
-                    $container = ApplicationContext::getContainer();
-                    if (!$container->has(PrivilegeGuardInterface::class)) {
-                        return Result::FORBIDDEN;
-                    }
-                    /** @var PrivilegeGuardInterface */
-                    $privilegeGuard = $container->get(PrivilegeGuardInterface::class);
-                    return $privilegeGuard->pass($credential, $this) ? Result::PASS : Result::FORBIDDEN;
-            }
-        }
-        return Result::FORBIDDEN;
     }
 }

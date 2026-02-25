@@ -6,76 +6,78 @@ namespace Verdient\Hyperf3\AccessControl;
 
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Contract\ConfigInterface;
-use Hyperf\Contract\ContainerInterface;
 use Hyperf\HttpServer\Router\Dispatched;
+use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * 凭据
+ *
  * @author Verdient。
  */
 class Credential
 {
     /**
-     * 数据
+     * 认证信息
+     *
      * @author Verdient。
      */
-    protected array $data = [];
+    protected IdentityInterface|null|false $identity = false;
+
+    /**
+     * 用户
+     *
+     * @author Verdient。
+     */
+    protected object|null|false $user = false;
+
+    /**
+     * 路由
+     *
+     * @author Verdient。
+     */
+    protected Route|null|false $route = false;
 
     /**
      * 容器
+     *
      * @author Verdient。
      */
     protected ContainerInterface $container;
 
     /**
      * @param ServerRequestInterface $request 请求对象
+     *
      * @author Verdient。
      */
-    public function __construct(
-        protected ServerRequestInterface $request
-    ) {
+    public function __construct(public readonly ServerRequestInterface $request)
+    {
         $this->container = ApplicationContext::getContainer();
     }
 
     /**
-     * 获取请求对象
-     * @author Verdient。
-     */
-    public function getRequest(): ServerRequestInterface
-    {
-        return $this->request;
-    }
-
-    /**
-     * 获取分派对象
+     * 获取调度对象
+     *
      * @author Verdient。
      */
     public function dispatched(): ?Dispatched
     {
-        if (!array_key_exists('dispatched', $this->data)) {
-            $this->data['dispatched'] = $this->request->getAttribute(Dispatched::class);
-        }
-        return $this->data['dispatched'];
+        return $this->request->getAttribute(Dispatched::class);
     }
 
     /**
      * 获取服务器名称
+     *
      * @author Verdient。
      */
     public function serverName(): ?string
     {
-        if (!array_key_exists('serverName', $this->data)) {
-            $this->data['serverName'] = null;
-            if ($dispatched = $this->dispatched()) {
-                $this->data['serverName'] = $dispatched->serverName;
-            }
-        }
-        return $this->data['serverName'];
+        return $this->dispatched()?->serverName;
     }
 
     /**
      * 获取是否是访客
+     *
      * @author Verdient。
      */
     public function isGuest(): bool
@@ -85,75 +87,70 @@ class Credential
 
     /**
      * 获取认证信息
+     *
      * @author Verdient。
      */
     public function identity(): ?Identity
     {
-        if (!array_key_exists('identity', $this->data)) {
-            $this->data['identity'] = null;
-            $config = $this->container->get(ConfigInterface::class);
+        if ($this->identity === false) {
 
-            $authenticatorClass = $config
-                ->get('access_control.authenticators.' . $this->serverName(), AuthenticatorInterface::class);
+            $this->identity = null;
 
-            if ($this->container->has($authenticatorClass)) {
-                /** @var AuthenticatorInterface */
-                $authenticator = $this->container->get($authenticatorClass);
-                $this->data['identity'] = $authenticator->identity($this);
+            if ($this->route()) {
+                $config = $this->container->get(ConfigInterface::class);
+                $authenticatorClass = $config
+                    ->get('access_control.authenticators.' . $this->serverName(), AuthenticatorInterface::class);
+
+                if ($this->container->has($authenticatorClass)) {
+                    /** @var AuthenticatorInterface */
+                    $authenticator = $this->container->get($authenticatorClass);
+                    $this->identity = $authenticator->identity($this->request, $this->route()->group());
+                }
             }
         }
-        return $this->data['identity'];
+
+        return $this->identity;
     }
 
     /**
      * 获取用户
+     *
      * @author Verdient。
      */
     public function user(): ?object
     {
-        if (!array_key_exists('user', $this->data)) {
-            $this->data['user'] = null;
+        if ($this->user === false) {
+
+            $this->user = null;
+
             if ($identity = $this->identity()) {
                 if ($this->container->has(UserFinderInterface::class)) {
                     /** @var UserFinderInterface */
                     $userFinder = $this->container->get(UserFinderInterface::class);
-                    $this->data['user'] = $userFinder->findUser($identity);
+                    $this->user = $userFinder->findUser($identity);
                 }
             }
         }
-        return $this->data['user'];
+
+        return $this->user;
     }
 
     /**
      * 获取当前访问的路由
+     *
      * @author Verdient。
      */
     public function route(): ?Route
     {
-        if (!array_key_exists('route', $this->data)) {
-            $this->data['route'] = null;
-            if ($dispatched = $this->dispatched()) {
-                $this->data['route'] = RouteManager::toRoute($this->serverName(), $dispatched->handler);
-            } else {
-                $this->data['route'] = null;
-            }
-        }
-        return $this->data['route'];
-    }
+        if ($this->route === false) {
 
-    /**
-     * 是否允许访问
-     * @author Verdient。
-     */
-    public function pass(): Result
-    {
-        if (!array_key_exists('pass', $this->data)) {
-            if (!$route = $this->route()) {
-                $this->data['pass'] = Result::PASS;
-            } else {
-                $this->data['pass'] = $route->pass($this);
+            $this->route = null;
+
+            if ($dispatched = $this->dispatched()) {
+                $this->route = RouteManager::toRoute($this->serverName(), $this->request->getMethod(), $dispatched->handler->route, $dispatched->handler);
             }
         }
-        return $this->data['pass'];
+
+        return $this->route;
     }
 }
