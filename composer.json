@@ -12,7 +12,7 @@
         "psr/http-message": "^2.0",
         "psr/http-server-handler": "^1.0",
         "psr/http-server-middleware": "^1.0",
-        "verdient/hyperf3-http-action": "^2.1"
+        "verdient/hyperf3-http-action": "^3.2"
     },
     "autoload": {
         "psr-4": {
